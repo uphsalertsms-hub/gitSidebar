@@ -181,6 +181,18 @@ const MODS = Object.freeze([
       {key:'my_application',   label:'My Application',   icon:'ti-clipboard-list'},
     ]
   },
+{
+  key:'uphsl_portal',
+  label:'UPHSL Portal',
+  badge:'Portal',
+  icon:'ti-world',
+  subs:[
+    { key:'uphsl_login',      label:'Login Page',                  icon:'ti-lock' },
+    { key:'forgot_password',  label:'Forgot Password',             icon:'ti-key' },
+    { key:'college_register', label:'College Applicant Register',  icon:'ti-user-plus' },
+    { key:'basiced_register', label:'Basic Ed Applicant Register', icon:'ti-users' }
+  ]
+},
 ]);
 
 /* ── Build TM & moduleSubKeys (same as original) ─────────── */
@@ -270,6 +282,7 @@ function cacheDom() {
   DOM.vbtnGrid     = $('vbtn-grid');
   DOM.vbtnList     = $('vbtn-list');
   DOM.starredBtn   = $('starred-btn');
+  DOM.bugBtn       = $('bug-btn');
   DOM.userNameDisp = $('user-name-disp');
 }
 
@@ -386,7 +399,7 @@ function recordHistory(note, changeDesc) {
     ts: Date.now(), desc: changeDesc || 'Edited', author: currentUserName,
     snapshot: {title: note.title, desc: note.desc, fn: note.fn, module: note.module, tags: note.tags ? [...note.tags] : []},
   });
-  if (noteHistory[note.id].length > 10) noteHistory[note.id].length = 10;
+  if (noteHistory[note.id].length > 2) noteHistory[note.id].length = 2;
 }
 
 function promptUserName() {
@@ -447,6 +460,7 @@ function _clearSidebarActive() {
   $$('.mod-items').forEach(d => d.classList.remove('open'));
   $$('.sub-item').forEach(b => b.classList.remove('active'));
   DOM.starredBtn.classList.remove('active');
+  DOM.bugBtn.classList.remove('active');
 }
 function filterAll(el) {
   activeFilter = 'all'; _clearSidebarActive(); el.classList.add('open');
@@ -458,6 +472,11 @@ function filterStarred(el) {
   DOM.ptitle.textContent = 'Starred Notes'; DOM.pbadge.textContent = 'Starred';
   _invalidateRenderCache(); renderNotes();
 }
+function filterBugs(el) {
+  activeFilter = 'bugs'; _clearSidebarActive(); el.classList.add('active');
+  DOM.ptitle.textContent = 'Bug Reports'; DOM.pbadge.textContent = 'Bugs';
+  _invalidateRenderCache(); renderNotes();
+}
 function toggleMod(key, el) {
   const items = $('mi-' + key); const wasOpen = items.classList.contains('open');
   _clearSidebarActive();
@@ -467,6 +486,7 @@ function filterSub(subKey, label, badge, el) {
   activeFilter = subKey;
   $$('.sub-item').forEach(b => b.classList.remove('active'));
   DOM.starredBtn.classList.remove('active');
+  DOM.bugBtn.classList.remove('active');
   el.classList.add('active');
   DOM.ptitle.textContent = label; DOM.pbadge.textContent = badge;
   DOM.sinput.value = '';
@@ -479,6 +499,7 @@ function getFiltered() {
   const tagF = DOM.filterTag.value;
   let base;
   if (activeFilter === 'starred') { base = notes.filter(n => n.starred); }
+  else if (activeFilter === 'bugs') { base = notes.filter(n => n.hasBug); }
   else if (activeFilter !== 'all') {
     const subSet = moduleSubKeys[activeFilter];
     base = subSet ? notes.filter(n => subSet.has(n.module)) : notes.filter(n => n.module === activeFilter);
@@ -577,6 +598,7 @@ function initGridDelegation() {
     const btn = e.target.closest('[data-action]'); if (!btn) return;
     const id = parseInt(btn.dataset.id); const act = btn.dataset.action;
     if (act === 'star')      toggleStar(id);
+    else if (act === 'bug')  toggleBug(id);
     else if (act === 'conn') openConnModal(id);
     else if (act === 'hist') openHistoryModal(id);
     else if (act === 'edit') openModal(id);
@@ -628,7 +650,7 @@ function renderNotes() {
         return `<span class="tag-chip" style="background:${c.bg};color:${c.color}">${esc(t)}</span>`;
       }).join('');
       const authorStr = n.author ? `<span class="note-author"><i class="ti ti-user" style="font-size:10px"></i>${esc(n.author)}</span>` : '';
-      parts.push(`<div class="note-card${n.starred?' starred-card':''}" id="nc-${n.id}">${imgSection}<div class="note-body"><div class="note-header-row"><span class="note-tag">${tm.badge}</span><button class="star-btn${n.starred?' starred':''}" data-action="star" data-id="${n.id}"><i class="ti ti-star${n.starred?'-filled':''}"></i></button></div><div class="note-title">${esc(n.title)}</div><div class="note-desc">${esc(n.desc)}</div><div class="note-fn"><strong>What it does</strong>${esc(n.fn)}</div>${tagsHtml?`<div class="note-tags-row">${tagsHtml}</div>`:''}<div class="note-conn-bar">${connChips}<button class="note-conn-add" data-action="conn" data-id="${n.id}"><i class="ti ti-plus"></i>${connected.length?'Edit':'Add'} connections</button></div><div class="note-meta"><div style="display:flex;flex-direction:column;gap:1px">${authorStr}<span class="note-date"><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${n.date||''}</span></div><div class="note-actions"><button class="icon-btn" data-action="hist" data-id="${n.id}"><i class="ti ti-history"></i></button><button class="icon-btn" data-action="edit" data-id="${n.id}"><i class="ti ti-edit"></i></button><button class="icon-btn" data-action="del" data-id="${n.id}"><i class="ti ti-trash"></i></button></div></div></div></div>`);
+      parts.push(`<div class="note-card${n.starred?' starred-card':''}${n.hasBug?' bug-card':''}" id="nc-${n.id}">${imgSection}<div class="note-body"><div class="note-header-row"><span class="note-tag">${tm.badge}</span><button class="star-btn${n.starred?' starred':''}" data-action="star" data-id="${n.id}"><i class="ti ti-star${n.starred?'-filled':''}"></i></button><button class="bug-btn${n.hasBug?' has-bug':''}" data-action="bug" data-id="${n.id}" title="Mark as bug"><i class="ti ti-bug${n.hasBug?'-filled':''}"></i></button></div><div class="note-title">${esc(n.title)}</div><div class="note-desc">${esc(n.desc)}</div><div class="note-fn"><strong>Bug Report</strong>${esc(n.fn)}</div>${tagsHtml?`<div class="note-tags-row">${tagsHtml}</div>`:''}<div class="note-conn-bar">${connChips}<button class="note-conn-add" data-action="conn" data-id="${n.id}"><i class="ti ti-plus"></i>${connected.length?'Edit':'Add'} connections</button></div><div class="note-meta"><div style="display:flex;flex-direction:column;gap:1px">${authorStr}<span class="note-date"><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${n.date||''}</span></div><div class="note-actions"><button class="icon-btn" data-action="hist" data-id="${n.id}"><i class="ti ti-history"></i></button><button class="icon-btn" data-action="edit" data-id="${n.id}"><i class="ti ti-edit"></i></button><button class="icon-btn" data-action="del" data-id="${n.id}"><i class="ti ti-trash"></i></button></div></div></div></div>`);
     });
   }
   DOM.ngrid.innerHTML = parts.join('');
@@ -649,7 +671,8 @@ function toggleStar(id) {
   const card = $('nc-' + id);
   if (card && currentView === 'grid') {
     card.classList.toggle('starred-card', n.starred);
-    const btn = card.querySelector(`.star-btn[data-id="${id}"]`);
+    const btn = card.querySelector(`.
+      [data-id="${id}"]`);
     if (btn) {
       btn.classList.toggle('starred', n.starred);
       const icon = btn.querySelector('i');
@@ -657,6 +680,29 @@ function toggleStar(id) {
     }
     // If filtered to starred-only and we just un-starred, need full render
     if (activeFilter === 'starred' && !n.starred) renderNotes();
+  } else {
+    renderNotes();
+  }
+  saveToStorage();
+}
+
+function toggleBug(id) {
+  const n = noteMap.get(id); if (!n) return;
+  n.hasBug = !n.hasBug;
+  _invalidateRenderCache();
+
+  // Targeted patch for grid view
+  const card = $('nc-' + id);
+  if (card && currentView === 'grid') {
+    card.classList.toggle('bug-card', n.hasBug);
+    const btn = card.querySelector(`.bug-btn[data-id="${id}"]`);
+    if (btn) {
+      btn.classList.toggle('has-bug', n.hasBug);
+      const icon = btn.querySelector('i');
+      if (icon) icon.className = 'ti ti-bug' + (n.hasBug ? '-filled' : '');
+    }
+    // If filtered to bugs-only and we just un-marked, need full render
+    if (activeFilter === 'bugs' && !n.hasBug) renderNotes();
   } else {
     renderNotes();
   }
@@ -736,13 +782,13 @@ function openModal(id) {
   modalImgData = n ? n.img : null; modalTags = n && n.tags ? [...n.tags] : []; _modalTagColors = n && n.tagColors ? {...n.tagColors} : {}; selectedTagColor = 0;
   const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; overlay.id = 'mov';
   const imgPrev = modalImgData ? `<img src="${modalImgData}" alt="preview">` : '';
-  overlay.innerHTML = `<div class="modal-box" style="width:480px">
+  overlay.innerHTML = `<div class="modal-box" style="width:900px;max-width:95vw">
     <div class="modal-head"><span class="modal-head-title"><i class="ti ti-notes" style="font-size:16px"></i>${n?'Edit Note':'Add Note'}</span><button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
     <div class="modal-body">
       <div class="form-row"><label class="form-label">Module / Sub-page</label><select id="m-mod">${getModOpts(n?n.module:'dashboard')}</select></div>
       <div class="form-row"><label class="form-label">Title</label><input type="text" id="m-title" value="${n?esc(n.title):''}" placeholder="Note title"></div>
       <div class="form-row"><label class="form-label">Description</label><textarea id="m-desc" placeholder="Brief description">${n?esc(n.desc):''}</textarea></div>
-      <div class="form-row"><label class="form-label">What it does</label><textarea id="m-fn" placeholder="Explain the function">${n?esc(n.fn):''}</textarea></div>
+      <div class="form-row"><label class="form-label">Bug Report</label><textarea id="m-fn" placeholder="Explain the bug">${n?esc(n.fn):''}</textarea></div>
       <div class="form-row"><label class="form-label">Custom Tags</label>
         <div class="tags-input-wrap" id="tags-wrap" onclick="this.querySelector('.tag-real-input').focus()">
           <div class="chips-area" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center"></div>
@@ -788,7 +834,7 @@ function modalImgChange(inp) {
 function closeModal() { const o = $('mov'); if (o) o.remove(); modalImgData = null; }
 function saveNote(id) {
   const title = $('m-title').value.trim(), desc = $('m-desc').value.trim(), fn = $('m-fn').value.trim(), mod = $('m-mod').value;
-  if (!title || !desc || !fn) { alert('Please fill in all required fields.'); return; }
+  if (!title) { alert('Please fill in the Title field (required).'); return; }
   if (id) {
     const n = noteMap.get(id); recordHistory(n, 'Edited');
     const oldSnap = {...n, tags: n.tags ? [...n.tags] : []};
@@ -796,7 +842,7 @@ function saveNote(id) {
     updateIndexesForNote(oldSnap, n);
   } else {
     const ts = new Date().toISOString();
-    const newNote = {id: nextId++, module: mod, title, desc, fn, date: new Date().toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}), createdAt: ts, img: modalImgData, tags: modalTags, tagColors: {..._modalTagColors}, author: currentUserName, starred: false};
+    const newNote = {id: nextId++, module: mod, title, desc, fn, date: new Date().toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}), createdAt: ts, img: modalImgData, tags: modalTags, tagColors: {..._modalTagColors}, author: currentUserName, starred: false, hasBug: false};
     notes.unshift(newNote); addToIndexes(newNote);
   }
   _invalidateRenderCache();

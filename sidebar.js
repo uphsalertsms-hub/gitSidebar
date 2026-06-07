@@ -3,15 +3,14 @@
 const $  = id  => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
 
-/* ── MODULES (unchanged from original) ────────────────────── */
+/* ── MODULES ────────────────────────────────────────────── */
 const MODS = Object.freeze([
-      {
+  {
     key:'System Administration', label:'System Administration', badge:'Admin', icon:'ti-speedboat',
     subs:[
       {key:'Online Payment', label:'Online Payment', icon:'ti ti-credit-card'},
     ]
   },
-
   {
     key:'administration', label:'Administration', badge:'Admin', icon:'ti-shield-check',
     subs:[
@@ -21,7 +20,7 @@ const MODS = Object.freeze([
       {key:'school_info',       label:'School Information',icon:'ti-books'},
     ]
   },
-    {
+  {
     key:'notification', label:'Notification', badge:'Notification', icon:'ti-bell',
     subs:[
       {key:'chat',           label:'Chat',                   icon:'ti-message'},
@@ -30,7 +29,7 @@ const MODS = Object.freeze([
     ]
   },
   {
-    key:'reports', label:'Reports', badge:'Reports', icon:'ti-chart-bar',                                   
+    key:'reports', label:'Reports', badge:'Reports', icon:'ti-chart-bar',
     subs:[
       {key:'enroll_summary',    label:'Enrollment Summary',         icon:'ti-users',        group:'ENROLLMENT',     groupIcon:'ti-users'},
       {key:'subject_enroll',    label:'Subject Enrollment Report',  icon:'ti-book'},
@@ -135,7 +134,7 @@ const MODS = Object.freeze([
       {key:'be_class_schedules',label:'Class Schedules',icon:'ti-calendar-time'},
     ]
   },
-    {
+  {
     key:'college_admission', label:'College Admission', badge:'Admission', icon:'ti-clipboard-list',
     subs:[
       {key:'applicants',       label:'Applicants',      icon:'ti-user-plus'},
@@ -181,21 +180,21 @@ const MODS = Object.freeze([
       {key:'my_application',   label:'My Application',   icon:'ti-clipboard-list'},
     ]
   },
-{
-  key:'uphsl_portal',
-  label:'UPHSL Portal',
-  badge:'Portal',
-  icon:'ti-world',
-  subs:[
-    { key:'uphsl_login',      label:'Login Page',                  icon:'ti-lock' },
-    { key:'forgot_password',  label:'Forgot Password',             icon:'ti-key' },
-    { key:'college_register', label:'College Applicant Register',  icon:'ti-user-plus' },
-    { key:'basiced_register', label:'Basic Ed Applicant Register', icon:'ti-users' }
-  ]
-},
+  {
+    key:'uphsl_portal',
+    label:'UPHSL Portal',
+    badge:'Portal',
+    icon:'ti-world',
+    subs:[
+      { key:'uphsl_login',      label:'Login Page',                  icon:'ti-lock' },
+      { key:'forgot_password',  label:'Forgot Password',             icon:'ti-key' },
+      { key:'college_register', label:'College Applicant Register',  icon:'ti-user-plus' },
+      { key:'basiced_register', label:'Basic Ed Applicant Register', icon:'ti-users' }
+    ]
+  },
 ]);
 
-/* ── Build TM & moduleSubKeys (same as original) ─────────── */
+/* ── Build TM & moduleSubKeys ─────────────────────────────── */
 const TM = {};
 const moduleSubKeys = {};
 MODS.forEach(m => {
@@ -218,10 +217,6 @@ const TAG_COLORS = Object.freeze([
   {bg:'#f0fdf4',color:'#14532d',dot:'#4ade80'},
 ]);
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 1: Freeze _emptySet so accidental mutation throws in
-   strict mode instead of silently corrupting the sentinel.
-═══════════════════════════════════════════════════════════ */
 const _emptySet = Object.freeze(new Set());
 
 let activeFilter    = 'all';
@@ -239,11 +234,7 @@ let currentUserName = 'Admin';
 let noteHistory     = {};
 let tagIndex        = new Map();
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 2: Module count cache — O(1) badge reads after initial
-   build. Invalidated only when a note's module changes.
-═══════════════════════════════════════════════════════════ */
-const moduleCountCache = new Map(); // subKey → count
+const moduleCountCache = new Map();
 
 function _rebuildModuleCountCache() {
   moduleCountCache.clear();
@@ -286,7 +277,7 @@ function cacheDom() {
   DOM.userNameDisp = $('user-name-disp');
 }
 
-/* ── Indexes (unchanged logic, cache wired in) ───────────── */
+/* ── Indexes ─────────────────────────────────────────────── */
 function rebuildIndexes() {
   noteMap.clear(); tagIndex.clear();
   notes.forEach(n => {
@@ -296,7 +287,7 @@ function rebuildIndexes() {
       tagIndex.get(t).add(n.id);
     });
   });
-  _rebuildModuleCountCache(); // FIX 2
+  _rebuildModuleCountCache();
 }
 function addToIndexes(note) {
   noteMap.set(note.id, note);
@@ -304,7 +295,7 @@ function addToIndexes(note) {
     if (!tagIndex.has(t)) tagIndex.set(t, new Set());
     tagIndex.get(t).add(note.id);
   });
-  _incModuleCount(note.module); // FIX 2
+  _incModuleCount(note.module);
 }
 function removeFromIndexes(note) {
   noteMap.delete(note.id);
@@ -312,7 +303,7 @@ function removeFromIndexes(note) {
     tagIndex.get(t)?.delete(note.id);
     if (tagIndex.get(t)?.size === 0) tagIndex.delete(t);
   });
-  _decModuleCount(note.module); // FIX 2
+  _decModuleCount(note.module);
 }
 function updateIndexesForNote(oldNote, newNote) {
   (oldNote.tags || []).forEach(t => {
@@ -324,17 +315,13 @@ function updateIndexesForNote(oldNote, newNote) {
     tagIndex.get(t).add(newNote.id);
   });
   noteMap.set(newNote.id, newNote);
-  // FIX 2: update module count if module changed
   if (oldNote.module !== newNote.module) {
     _decModuleCount(oldNote.module);
     _incModuleCount(newNote.module);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 3: Track saved byte size in-memory. _updateStoragePill
-   no longer calls localStorage.getItem just to measure size.
-═══════════════════════════════════════════════════════════ */
+/* ── Storage ─────────────────────────────────────────────── */
 let _savedByteSize = 0;
 
 const LS_KEY = 'usermanual2026_admin_v1';
@@ -352,7 +339,7 @@ function _doSave() {
       nextId, isDark, currentUserName, noteHistory
     });
     localStorage.setItem(LS_KEY, payload);
-    _savedByteSize = new Blob([payload]).size; // FIX 3: measure once on write
+    _savedByteSize = new Blob([payload]).size;
     _updateStoragePill();
   } catch(e) { console.warn('Save failed:', e); }
 }
@@ -360,7 +347,7 @@ function loadFromStorage() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
-    _savedByteSize = new Blob([raw]).size; // FIX 3: measure on load
+    _savedByteSize = new Blob([raw]).size;
     const data = JSON.parse(raw);
     if (data.notes && Array.isArray(data.notes)) {
       notes  = data.notes;
@@ -378,7 +365,6 @@ function loadFromStorage() {
   } catch(e) { return false; }
 }
 function _updateStoragePill() {
-  // FIX 3: uses _savedByteSize — no localStorage re-read
   if (!_savedByteSize) { DOM.storageLabel.textContent = 'No saved data'; return; }
   const kb = (_savedByteSize / 1024).toFixed(1);
   DOM.storageLabel.textContent = `Saved · ${notes.length} notes · ${kb} KB`;
@@ -397,7 +383,7 @@ function recordHistory(note, changeDesc) {
   if (!noteHistory[note.id]) noteHistory[note.id] = [];
   noteHistory[note.id].unshift({
     ts: Date.now(), desc: changeDesc || 'Edited', author: currentUserName,
-    snapshot: {title: note.title, desc: note.desc, fn: note.fn, module: note.module, tags: note.tags ? [...note.tags] : []},
+    snapshot: {title: note.title, desc: note.desc, fn: note.fn, link: note.link || '', module: note.module, tags: note.tags ? [...note.tags] : []},
   });
   if (noteHistory[note.id].length > 2) noteHistory[note.id].length = 2;
 }
@@ -430,7 +416,6 @@ function buildSidebar() {
         lastGroup = s.group;
         parts.push(`<div class="sub-group-header"><i class="ti ${s.groupIcon||'ti-point'}"></i>${s.group}</div>`);
       }
-      // FIX 2: use cache at build time (cache built after loadFromStorage)
       const cnt = moduleCountCache.get(s.key) || 0;
       parts.push(`<button class="sub-item" id="si-${s.key}" onclick="filterSub('${s.key}','${m.label} › ${s.label}','${m.badge}',this)"><i class="ti ${s.icon}"></i>${s.label}${cnt ? `<span class="sub-badge">${cnt}</span>` : ''}</button>`);
     });
@@ -439,10 +424,6 @@ function buildSidebar() {
   nav.innerHTML = parts.join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 2: refreshSidebarCounts is now O(total_subs) using the
-   cache instead of O(notes × total_subs).
-═══════════════════════════════════════════════════════════ */
 function refreshSidebarCounts() {
   MODS.forEach(m => m.subs.forEach(s => {
     const el = $('si-' + s.key); if (!el) return;
@@ -507,7 +488,7 @@ function getFiltered() {
   if (tagF) { const ids = tagIndex.get(tagF); if (!ids || ids.size === 0) return []; base = base.filter(n => ids.has(n.id)); }
   if (imgF === 'with')    base = base.filter(n => n.img);
   if (imgF === 'without') base = base.filter(n => !n.img);
-  if (q) base = base.filter(n => (n.title + n.desc + n.fn + (n.tags || []).join(' ')).toLowerCase().includes(q));
+  if (q) base = base.filter(n => (n.title + n.desc + n.fn + (n.link||'') + (n.tags || []).join(' ')).toLowerCase().includes(q));
   return base;
 }
 function getSorted(arr) {
@@ -528,7 +509,6 @@ function updateProgress() {
     let total = 0, covered = 0;
     MODS.forEach(m => {
       total += m.subs.length;
-      // FIX 2: use cache instead of notes.some()
       m.subs.forEach(s => { if (moduleCountCache.has(s.key)) covered++; });
     });
     const pct = total ? Math.round(covered / total * 100) : 0;
@@ -539,7 +519,7 @@ function updateProgress() {
     const mod = MODS.find(m => m.key === activeFilter);
     if (mod) {
       const total = mod.subs.length;
-      const covered = mod.subs.filter(s => moduleCountCache.has(s.key)).length; // FIX 2
+      const covered = mod.subs.filter(s => moduleCountCache.has(s.key)).length;
       const pct = total ? Math.round(covered / total * 100) : 0;
       DOM.progLabel.textContent = `${mod.label} coverage: ${covered}/${total}`;
       DOM.progFill.style.width = pct + '%'; DOM.progPct.textContent = pct + '%';
@@ -563,11 +543,7 @@ function renderTagFilter() {
   DOM.filterTag.innerHTML = parts.join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 4: Render cache — skips getFiltered+getSorted when the
-   filter inputs haven't changed. Cache key encodes all filter
-   dimensions. Invalidated explicitly on data/filter changes.
-═══════════════════════════════════════════════════════════ */
+/* ── Render cache ─────────────────────────────────────────── */
 let _renderCacheKey  = null;
 let _renderCacheData = null;
 
@@ -579,8 +555,8 @@ function _getRenderCacheKey() {
     DOM.filterTag.value,
     DOM.filterImg.value,
     currentView,
-    notes.length,            // crude version stamp — invalidated by add/delete
-    JSON.stringify(Object.keys(noteConnections).map(k => (noteConnections[k]||_emptySet).size)), // connection sizes
+    notes.length,
+    JSON.stringify(Object.keys(noteConnections).map(k => (noteConnections[k]||_emptySet).size)),
   ].join('|');
 }
 function _invalidateRenderCache() { _renderCacheKey = null; _renderCacheData = null; }
@@ -608,10 +584,6 @@ function initGridDelegation() {
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 4 cont.: renderNotes uses the cache. Star and connection
-   changes patch existing DOM nodes instead of rebuilding all.
-═══════════════════════════════════════════════════════════ */
 function renderNotes() {
   const cacheKey = _getRenderCacheKey();
   let filtered;
@@ -650,35 +622,32 @@ function renderNotes() {
         return `<span class="tag-chip" style="background:${c.bg};color:${c.color}">${esc(t)}</span>`;
       }).join('');
       const authorStr = n.author ? `<span class="note-author"><i class="ti ti-user" style="font-size:10px"></i>${esc(n.author)}</span>` : '';
-      parts.push(`<div class="note-card${n.starred?' starred-card':''}${n.hasBug?' bug-card':''}" id="nc-${n.id}">${imgSection}<div class="note-body"><div class="note-header-row"><span class="note-tag">${tm.badge}</span><button class="star-btn${n.starred?' starred':''}" data-action="star" data-id="${n.id}"><i class="ti ti-star${n.starred?'-filled':''}"></i></button><button class="bug-btn${n.hasBug?' has-bug':''}" data-action="bug" data-id="${n.id}" title="Mark as bug"><i class="ti ti-bug${n.hasBug?'-filled':''}"></i></button></div><div class="note-title">${esc(n.title)}</div><div class="note-desc">${esc(n.desc)}</div><div class="note-fn"><strong>Bug Report</strong>${esc(n.fn)}</div>${tagsHtml?`<div class="note-tags-row">${tagsHtml}</div>`:''}<div class="note-conn-bar">${connChips}<button class="note-conn-add" data-action="conn" data-id="${n.id}"><i class="ti ti-plus"></i>${connected.length?'Edit':'Add'} connections</button></div><div class="note-meta"><div style="display:flex;flex-direction:column;gap:1px">${authorStr}<span class="note-date"><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${n.date||''}</span></div><div class="note-actions"><button class="icon-btn" data-action="hist" data-id="${n.id}"><i class="ti ti-history"></i></button><button class="icon-btn" data-action="edit" data-id="${n.id}"><i class="ti ti-edit"></i></button><button class="icon-btn" data-action="del" data-id="${n.id}"><i class="ti ti-trash"></i></button></div></div></div></div>`);
+
+      /* ── Link row shown under bug report if present ── */
+      const linkHtml = n.link
+        ? `<div style="margin-top:4px"><a href="${esc(n.link)}" target="_blank" rel="noopener" style="font-size:10px;color:#1a7a3a;word-break:break-all;display:inline-flex;align-items:center;gap:3px;text-decoration:none;"><i class="ti ti-external-link" style="font-size:11px;flex-shrink:0"></i>${esc(n.link)}</a></div>`
+        : '';
+
+      parts.push(`<div class="note-card${n.starred?' starred-card':''}${n.hasBug?' bug-card':''}" id="nc-${n.id}">${imgSection}<div class="note-body"><div class="note-header-row"><span class="note-tag">${tm.badge}</span><button class="star-btn${n.starred?' starred':''}" data-action="star" data-id="${n.id}"><i class="ti ti-star${n.starred?'-filled':''}"></i></button><button class="bug-btn${n.hasBug?' has-bug':''}" data-action="bug" data-id="${n.id}" title="Mark as bug"><i class="ti ti-bug${n.hasBug?'-filled':''}"></i></button></div><div class="note-title">${esc(n.title)}</div><div class="note-desc">${esc(n.desc)}</div><div class="note-fn"><strong>Bug Report</strong>${esc(n.fn)}${linkHtml}</div>${tagsHtml?`<div class="note-tags-row">${tagsHtml}</div>`:''}<div class="note-conn-bar">${connChips}<button class="note-conn-add" data-action="conn" data-id="${n.id}"><i class="ti ti-plus"></i>${connected.length?'Edit':'Add'} connections</button></div><div class="note-meta"><div style="display:flex;flex-direction:column;gap:1px">${authorStr}<span class="note-date"><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${n.date||''}</span></div><div class="note-actions"><button class="icon-btn" data-action="hist" data-id="${n.id}"><i class="ti ti-history"></i></button><button class="icon-btn" data-action="edit" data-id="${n.id}"><i class="ti ti-edit"></i></button><button class="icon-btn" data-action="del" data-id="${n.id}"><i class="ti ti-trash"></i></button></div></div></div></div>`);
     });
   }
   DOM.ngrid.innerHTML = parts.join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 4: toggleStar patches the existing card in-place instead
-   of triggering a full renderNotes(). Falls back to full
-   render only if the card element isn't found (e.g. filter
-   hides starred notes immediately).
-═══════════════════════════════════════════════════════════ */
 function toggleStar(id) {
   const n = noteMap.get(id); if (!n) return;
   n.starred = !n.starred;
   _invalidateRenderCache();
 
-  // Targeted patch for grid view
   const card = $('nc-' + id);
   if (card && currentView === 'grid') {
     card.classList.toggle('starred-card', n.starred);
-    const btn = card.querySelector(`.
-      [data-id="${id}"]`);
+    const btn = card.querySelector(`[data-action="star"][data-id="${id}"]`);
     if (btn) {
       btn.classList.toggle('starred', n.starred);
       const icon = btn.querySelector('i');
       if (icon) icon.className = 'ti ti-star' + (n.starred ? '-filled' : '');
     }
-    // If filtered to starred-only and we just un-starred, need full render
     if (activeFilter === 'starred' && !n.starred) renderNotes();
   } else {
     renderNotes();
@@ -691,7 +660,6 @@ function toggleBug(id) {
   n.hasBug = !n.hasBug;
   _invalidateRenderCache();
 
-  // Targeted patch for grid view
   const card = $('nc-' + id);
   if (card && currentView === 'grid') {
     card.classList.toggle('bug-card', n.hasBug);
@@ -701,7 +669,6 @@ function toggleBug(id) {
       const icon = btn.querySelector('i');
       if (icon) icon.className = 'ti ti-bug' + (n.hasBug ? '-filled' : '');
     }
-    // If filtered to bugs-only and we just un-marked, need full render
     if (activeFilter === 'bugs' && !n.hasBug) renderNotes();
   } else {
     renderNotes();
@@ -727,16 +694,11 @@ function toggleConnRow(el) { el.classList.toggle('checked'); el.querySelector('.
 function saveConnections() {
   const checked = [...$$('#conn-modal-body .conn-note-row.checked')].map(el => parseInt(el.dataset.nid));
   noteConnections[connEditingId] = new Set(checked);
-  _invalidateRenderCache(); // FIX 4: connections changed
+  _invalidateRenderCache();
   closeConnModal(); renderNotes(); saveToStorage();
 }
 function closeConnModal() { $('conn-modal-overlay').classList.remove('open'); connEditingId = null; }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 5: _fileInputs DOM cleanup on note delete.
-   The input element is now removed from document.body when the
-   note is deleted, preventing unbounded DOM growth.
-═══════════════════════════════════════════════════════════ */
 const _fileInputs = new Map();
 function triggerImgPick(id) {
   let inp = _fileInputs.get(id);
@@ -779,45 +741,101 @@ function _removeModalTag(tag, wrap) { modalTags = modalTags.filter(t => t !== ta
 
 function openModal(id) {
   const n = id ? noteMap.get(id) : null;
-  modalImgData = n ? n.img : null; modalTags = n && n.tags ? [...n.tags] : []; _modalTagColors = n && n.tagColors ? {...n.tagColors} : {}; selectedTagColor = 0;
-  const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; overlay.id = 'mov';
+  modalImgData = n ? n.img : null;
+  modalTags = n && n.tags ? [...n.tags] : [];
+  _modalTagColors = n && n.tagColors ? {...n.tagColors} : {};
+  selectedTagColor = 0;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'mov';
+
   const imgPrev = modalImgData ? `<img src="${modalImgData}" alt="preview">` : '';
+
   overlay.innerHTML = `<div class="modal-box" style="width:900px;max-width:95vw">
-    <div class="modal-head"><span class="modal-head-title"><i class="ti ti-notes" style="font-size:16px"></i>${n?'Edit Note':'Add Note'}</span><button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    <div class="modal-body">
-      <div class="form-row"><label class="form-label">Module / Sub-page</label><select id="m-mod">${getModOpts(n?n.module:'dashboard')}</select></div>
-      <div class="form-row"><label class="form-label">Title</label><input type="text" id="m-title" value="${n?esc(n.title):''}" placeholder="Note title"></div>
-      <div class="form-row"><label class="form-label">Description</label><textarea id="m-desc" placeholder="Brief description">${n?esc(n.desc):''}</textarea></div>
-      <div class="form-row"><label class="form-label">Bug Report</label><textarea id="m-fn" placeholder="Explain the bug">${n?esc(n.fn):''}</textarea></div>
-      <div class="form-row"><label class="form-label">Custom Tags</label>
-        <div class="tags-input-wrap" id="tags-wrap" onclick="this.querySelector('.tag-real-input').focus()">
-          <div class="chips-area" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center"></div>
-          <input class="tag-real-input" placeholder="Type tag + Enter" style="border:none;background:none;outline:none;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--primary-heading);min-width:80px;flex:1">
+    <div class="modal-head">
+      <span class="modal-head-title"><i class="ti ti-notes" style="font-size:16px"></i>${n ? 'Edit Note' : 'Add Note'}</span>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:0 20px 20px">
+      <!-- LEFT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-row">
+          <label class="form-label">Module / Sub-page</label>
+          <select id="m-mod">${getModOpts(n ? n.module : 'dashboard')}</select>
         </div>
-        <div class="tag-colors" id="tag-color-picker">${TAG_COLORS.map((c,i)=>`<div class="tag-color-dot${i===0?' sel':''}" style="background:${c.dot}" data-ci="${i}" onclick="selectTagColor(${i},this)"></div>`).join('')}</div>
+        <div class="form-row">
+          <label class="form-label">Title</label>
+          <input type="text" id="m-title" value="${n ? esc(n.title) : ''}" placeholder="Note title">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Description</label>
+          <textarea id="m-desc" placeholder="Brief description">${n ? esc(n.desc) : ''}</textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Bug Report</label>
+          <textarea id="m-fn" placeholder="Explain the bug">${n ? esc(n.fn) : ''}</textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Custom Tags</label>
+          <div class="tags-input-wrap" id="tags-wrap" onclick="this.querySelector('.tag-real-input').focus()">
+            <div class="chips-area" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center"></div>
+            <input class="tag-real-input" placeholder="Type tag + Enter" style="border:none;background:none;outline:none;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--primary-heading);min-width:80px;flex:1">
+          </div>
+          <div class="tag-colors" id="tag-color-picker">${TAG_COLORS.map((c,i) => `<div class="tag-color-dot${i===0?' sel':''}" style="background:${c.dot}" data-ci="${i}" onclick="selectTagColor(${i},this)"></div>`).join('')}</div>
+        </div>
       </div>
-      <div class="form-row"><label class="form-label">Screenshot / Image</label>
-        <div class="img-upload-zone" id="miz">${imgPrev}
-          <i class="ti ti-upload" id="miz-icon" style="${modalImgData?'display:none':''}"></i>
-          <span id="miz-txt" style="${modalImgData?'display:none':''}">Click to upload image</span>
-          <input type="file" accept="image/*" onchange="modalImgChange(this)">
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-row">
+          <label class="form-label" style="display:flex;align-items:center;gap:5px">
+            <i class="ti ti-link" style="font-size:12px;color:#1a7a3a"></i>Problem URL / Link
+          </label>
+          <input type="url" id="m-link" value="${n ? esc(n.link || '') : ''}" placeholder="https://example.com/page-with-the-problem">
+        </div>
+        <div class="form-row" style="flex:1">
+          <label class="form-label">Screenshot / Image</label>
+          <div class="img-upload-zone" id="miz" style="flex:1;min-height:0;aspect-ratio:unset">
+            ${imgPrev}
+            <i class="ti ti-upload" id="miz-icon" style="${modalImgData ? 'display:none' : ''}"></i>
+            <span id="miz-txt" style="${modalImgData ? 'display:none' : ''}">Click to upload image</span>
+            <input type="file" accept="image/*" onchange="modalImgChange(this)">
+          </div>
         </div>
       </div>
     </div>
-    <div class="modal-foot"><div></div><div class="modal-foot-right"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveNote(${n?n.id:0})">${n?'Save Changes':'Add Note'}</button></div></div>
+    <div class="modal-foot">
+      <div></div>
+      <div class="modal-foot-right">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveNote(${n ? n.id : 0})">${n ? 'Save Changes' : 'Add Note'}</button>
+      </div>
+    </div>
   </div>`;
+
   $('app').appendChild(overlay);
   buildTagsUI($('tags-wrap'), modalTags, _modalTagColors);
+
   const tagInp = overlay.querySelector('.tag-real-input');
   tagInp.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const v = tagInp.value.trim().replace(/,/g,'');
-      if (v && !modalTags.includes(v)) { modalTags.push(v); _modalTagColors[v] = selectedTagColor; _renderTagChips($('tags-wrap')); tagInp.value = ''; }
+      if (v && !modalTags.includes(v)) {
+        modalTags.push(v);
+        _modalTagColors[v] = selectedTagColor;
+        _renderTagChips($('tags-wrap'));
+        tagInp.value = '';
+      }
     }
   });
 }
-function selectTagColor(ci, el) { selectedTagColor = ci; $$('#mov .tag-color-dot').forEach(d => d.classList.remove('sel')); el.classList.add('sel'); }
+
+function selectTagColor(ci, el) {
+  selectedTagColor = ci;
+  $$('#mov .tag-color-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+}
 function modalImgChange(inp) {
   const f = inp.files[0]; if (!f) return;
   const r = new FileReader();
@@ -827,39 +845,73 @@ function modalImgChange(inp) {
     if (!img) { img = document.createElement('img'); z.insertBefore(img, z.firstChild); }
     img.src = modalImgData;
     const icon = $('miz-icon'), txt = $('miz-txt');
-    if (icon) icon.style.display = 'none'; if (txt) txt.style.display = 'none';
+    if (icon) icon.style.display = 'none';
+    if (txt)  txt.style.display  = 'none';
   };
   r.readAsDataURL(f);
 }
 function closeModal() { const o = $('mov'); if (o) o.remove(); modalImgData = null; }
+
 function saveNote(id) {
-  const title = $('m-title').value.trim(), desc = $('m-desc').value.trim(), fn = $('m-fn').value.trim(), mod = $('m-mod').value;
+  const title = $('m-title').value.trim();
+  const desc  = $('m-desc').value.trim();
+  const fn    = $('m-fn').value.trim();
+  const mod   = $('m-mod').value;
+  const link  = $('m-link').value.trim();
+
   if (!title) { alert('Please fill in the Title field (required).'); return; }
+
   if (id) {
-    const n = noteMap.get(id); recordHistory(n, 'Edited');
+    const n = noteMap.get(id);
+    recordHistory(n, 'Edited');
     const oldSnap = {...n, tags: n.tags ? [...n.tags] : []};
-    n.title = title; n.desc = desc; n.fn = fn; n.module = mod; n.img = modalImgData; n.tags = modalTags; n.tagColors = {..._modalTagColors}; n.author = currentUserName;
+    n.title     = title;
+    n.desc      = desc;
+    n.fn        = fn;
+    n.link      = link;
+    n.module    = mod;
+    n.img       = modalImgData;
+    n.tags      = modalTags;
+    n.tagColors = {..._modalTagColors};
+    n.author    = currentUserName;
     updateIndexesForNote(oldSnap, n);
   } else {
     const ts = new Date().toISOString();
-    const newNote = {id: nextId++, module: mod, title, desc, fn, date: new Date().toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}), createdAt: ts, img: modalImgData, tags: modalTags, tagColors: {..._modalTagColors}, author: currentUserName, starred: false, hasBug: false};
-    notes.unshift(newNote); addToIndexes(newNote);
+    const newNote = {
+      id: nextId++,
+      module: mod,
+      title,
+      desc,
+      fn,
+      link,
+      date: new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+      createdAt: ts,
+      img: modalImgData,
+      tags: modalTags,
+      tagColors: {..._modalTagColors},
+      author: currentUserName,
+      starred: false,
+      hasBug: false,
+    };
+    notes.unshift(newNote);
+    addToIndexes(newNote);
   }
   _invalidateRenderCache();
-  closeModal(); renderNotes(); refreshSidebarCounts(); renderTagFilter(); saveToStorage();
+  closeModal();
+  renderNotes();
+  refreshSidebarCounts();
+  renderTagFilter();
+  saveToStorage();
   showToast(id ? 'Note updated!' : 'Note added!');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 5 cont.: deleteNote removes the <input type=file> from
-   the DOM, not just from the Map.
-═══════════════════════════════════════════════════════════ */
 function deleteNote(id) {
   if (!confirm('Delete this note?')) return;
   const n = noteMap.get(id); if (n) removeFromIndexes(n);
-  notes = notes.filter(x => x.id !== id); delete noteConnections[id]; delete noteHistory[id];
+  notes = notes.filter(x => x.id !== id);
+  delete noteConnections[id];
+  delete noteHistory[id];
   for (const s of Object.values(noteConnections)) s.delete(id);
-  // FIX 5: actually remove the DOM node, not just the Map entry
   const inp = _fileInputs.get(id);
   if (inp) { inp.remove(); _fileInputs.delete(id); }
   _invalidateRenderCache();
@@ -871,10 +923,10 @@ function openHistoryModal(id) {
   const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; overlay.id = 'hmov';
   overlay.innerHTML = `<div class="modal-box">
     <div class="modal-head"><span class="modal-head-title"><i class="ti ti-history" style="font-size:16px"></i>Revision History</span><button class="modal-close" onclick="$('hmov').remove()"><i class="ti ti-x"></i></button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div style="font-size:12px;color:var(--primary-icon);margin-bottom:8px">Note: <strong style="color:var(--primary-heading)">${esc(n.title)}</strong></div>
-      ${!hist.length?`<div style="text-align:center;padding:20px;color:var(--primary-icon);font-size:13px"><i class="ti ti-history" style="font-size:28px;display:block;margin-bottom:8px;opacity:.5"></i>No edit history yet</div>`:''}
-      <div class="history-list">${hist.map((h,i)=>`<div class="history-item"><div class="history-dot"></div><div class="history-meta"><div class="history-time">${new Date(h.ts).toLocaleString()} · ${esc(h.author||'Unknown')}</div><div class="history-summary">${esc(h.desc)}: "${esc((h.snapshot.title||'').slice(0,40))}"</div></div><button class="history-restore" onclick="restoreHistory(${id},${i})">Restore</button></div>`).join('')}</div>
+      ${!hist.length ? `<div style="text-align:center;padding:20px;color:var(--primary-icon);font-size:13px"><i class="ti ti-history" style="font-size:28px;display:block;margin-bottom:8px;opacity:.5"></i>No edit history yet</div>` : ''}
+      <div class="history-list">${hist.map((h,i) => `<div class="history-item"><div class="history-dot"></div><div class="history-meta"><div class="history-time">${new Date(h.ts).toLocaleString()} · ${esc(h.author||'Unknown')}</div><div class="history-summary">${esc(h.desc)}: "${esc((h.snapshot.title||'').slice(0,40))}"</div></div><button class="history-restore" onclick="restoreHistory(${id},${i})">Restore</button></div>`).join('')}</div>
     </div>
     <div class="modal-foot"><div></div><div class="modal-foot-right"><button class="btn-cancel" onclick="$('hmov').remove()">Close</button></div></div>
   </div>`;
@@ -884,8 +936,18 @@ function restoreHistory(noteId, histIdx) {
   if (!confirm('Restore this version?')) return;
   const n = noteMap.get(noteId); const snap = noteHistory[noteId][histIdx].snapshot;
   recordHistory(n, 'Before restore');
-  n.title = snap.title; n.desc = snap.desc; n.fn = snap.fn; n.module = snap.module || n.module; n.tags = snap.tags || [];
-  updateIndexesForNote(n, n); $('hmov').remove(); _invalidateRenderCache(); renderNotes(); saveToStorage(); showToast('Version restored!');
+  n.title  = snap.title;
+  n.desc   = snap.desc;
+  n.fn     = snap.fn;
+  n.link   = snap.link || '';
+  n.module = snap.module || n.module;
+  n.tags   = snap.tags || [];
+  updateIndexesForNote(n, n);
+  $('hmov').remove();
+  _invalidateRenderCache();
+  renderNotes();
+  saveToStorage();
+  showToast('Version restored!');
 }
 
 function exportData() {
@@ -893,8 +955,10 @@ function exportData() {
   for (const [k, v] of Object.entries(noteConnections)) connObj[k] = [...v];
   const blob = new Blob([JSON.stringify({version:'admin-v1', exported: new Date().toISOString(), notes, connections: connObj, noteHistory}, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'usermanual2026_admin_' + new Date().toISOString().slice(0,10) + '.json'; a.click();
-  requestAnimationFrame(() => URL.revokeObjectURL(a.href)); showToast('Notes exported!');
+  a.download = 'usermanual2026_admin_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  requestAnimationFrame(() => URL.revokeObjectURL(a.href));
+  showToast('Notes exported!');
 }
 function importData(inp) {
   const f = inp.files[0]; if (!f) return;
@@ -904,11 +968,15 @@ function importData(inp) {
       const data = JSON.parse(e.target.result);
       if (!data.notes || !Array.isArray(data.notes)) throw new Error('Invalid');
       if (!confirm(`Import ${data.notes.length} note(s)? This will REPLACE current notes.`)) { inp.value = ''; return; }
-      notes = data.notes; nextId = Math.max(...notes.map(n => n.id || 0), 0) + 1;
+      notes = data.notes;
+      nextId = Math.max(...notes.map(n => n.id || 0), 0) + 1;
       noteConnections = {};
-      if (data.connections) { for (const [k, v] of Object.entries(data.connections)) noteConnections[parseInt(k)] = new Set(v.map(Number)); }
+      if (data.connections) {
+        for (const [k, v] of Object.entries(data.connections))
+          noteConnections[parseInt(k)] = new Set(v.map(Number));
+      }
       noteHistory = data.noteHistory || {};
-      rebuildIndexes(); // also rebuilds moduleCountCache (FIX 2)
+      rebuildIndexes();
       _invalidateRenderCache();
       renderNotes(); refreshSidebarCounts(); renderTagFilter(); saveToStorage(true);
       showToast(`${data.notes.length} notes imported!`);
@@ -918,12 +986,7 @@ function importData(inp) {
   r.readAsText(f);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FIX 6: generateFlowchart XSS prevention.
-   fnNodes/fnConns are serialized with a replacer that escapes
-   the string "</script>" so it can't break out of the script
-   block when embedded in the generated HTML document.
-═══════════════════════════════════════════════════════════ */
+/* ── Flowchart ───────────────────────────────────────────── */
 function _safeJson(obj) {
   return JSON.stringify(obj).replace(/<\/script>/gi, '<\\/script>');
 }
@@ -945,7 +1008,6 @@ function generateFlowchart() {
       if (fnNodes[fromId] && fnNodes[toId]) fnConns.push({id: 'c' + cIdx++, from: String(fromId), to: String(toId), color: CONN_COLORS[(cIdx-2) % CONN_COLORS.length]});
     }
   }
-  // FIX 6: use _safeJson to prevent </script> injection
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>FlowNotes</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#001f0f;color:#e2e4f0;font-family:system-ui,sans-serif;overflow:hidden;height:100vh}#bar{padding:10px 16px;background:#002b15;border-bottom:1px solid #1a5a30;display:flex;align-items:center;gap:10px;font-size:13px}#bar strong{color:#4fc87a}#cvswrap{position:relative;width:100%;height:calc(100vh - 44px);overflow:hidden}#cvs{position:absolute;top:0;left:0;transform-origin:0 0}#svgl{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}#svgl svg{position:absolute;top:0;left:0;overflow:visible}.node{position:absolute;background:#002b15;border:1.5px solid #1a5a30;border-radius:10px;width:200px;cursor:grab;padding:12px;transition:box-shadow .15s}.node:hover{box-shadow:0 4px 20px rgba(0,0,0,0.5)}.node h4{font-size:12px;font-weight:600;color:#e2e4f0;margin-bottom:4px}.node p{font-size:10px;color:#6b9b7a;line-height:1.5}.node-top{height:3px;border-radius:2px;margin-bottom:8px;background:#1a7a3a}</style></head>
 <body><div id="bar"><strong>FlowNotes</strong> — Admin Portal Flowchart<span style="margin-left:10px;font-size:11px;color:#4a7a5a">Drag · Scroll to zoom · Double-click line to delete</span></div>
 <div id="cvswrap"><div id="cvs"></div><div id="svgl"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
@@ -972,7 +1034,9 @@ renderAll();applyT();
 
 let _toastTimer = null;
 function showToast(msg) {
-  DOM.toastMsg.textContent = msg; DOM.toast.classList.add('show'); clearTimeout(_toastTimer);
+  DOM.toastMsg.textContent = msg;
+  DOM.toast.classList.add('show');
+  clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => DOM.toast.classList.remove('show'), 2800);
 }
 
@@ -986,11 +1050,11 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── Init (order matters: cache build before sidebar render) */
+/* ── Init ── */
 cacheDom();
-loadFromStorage();   // populates notes[]
-rebuildIndexes();    // builds noteMap, tagIndex, moduleCountCache
-buildSidebar();      // reads moduleCountCache — correct counts on first paint
+loadFromStorage();
+rebuildIndexes();
+buildSidebar();
 refreshSidebarCounts();
 initGridDelegation();
 DOM.userNameDisp.textContent = '👤 ' + currentUserName;
